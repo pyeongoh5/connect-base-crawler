@@ -1,5 +1,5 @@
 const path = require("path");
-
+const nodeExternals = require('webpack-node-externals');
 console.log(process.env.BUILD_PRODUCTION);
 
 module.exports = {
@@ -21,5 +21,6 @@ module.exports = {
   node: {
     __dirname: false, // Use node.js __dirname
   },
+  externals: [nodeExternals()],
   target: 'electron-main',
 };

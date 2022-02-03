@@ -127,4 +127,4 @@ yarn-debug.log*
 yarn-error.log*
 
 public/main.js
-electron/main.js
+electron/**/*.js
