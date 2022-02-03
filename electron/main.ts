@@ -1,6 +1,7 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, ipcMain } from 'electron';
 import * as isDev from 'electron-is-dev';
 import * as path from 'path';
+import './ipcMain';
 
 let mainWindow: BrowserWindow;
 
@@ -54,3 +55,8 @@ app.on('activate', () => {
     createWindow();
   }
 });
+
+ipcMain.on('Test', (event, ...args) => {
+  console.log('ipcMain receive message::', args[0]);
+  event.sender.send('Test', 'reflect message')
+})
