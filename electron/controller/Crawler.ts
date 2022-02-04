@@ -1,4 +1,5 @@
-import { Category } from '../model/Category';
+import { Driver } from 'selenium-webdriver/chrome';
+import { Category, WebElement } from '../model/';
 
 const path = require('path');
 const { Builder } = require('selenium-webdriver');
@@ -8,7 +9,7 @@ const chromeDriverPath = path.resolve('chromedriver');
 const By = require('selenium-webdriver').By;
 
 export class Crawler {
-  driver: any;
+  driver: Driver;
   categories: Category[];
   constructor() {
     this.categories = [];
@@ -17,8 +18,6 @@ export class Crawler {
     .forBrowser('chrome')
     .setChromeOptions(new chrome.Options().headless())
     .setChromeService(serviceBuilder)
-    // .usingServer('http://127.0.0.1:8080')
-    // .setProxy(proxy.manual({http: 'http://127.0.0.1:8080'}))
     .build();
   }
 
@@ -55,49 +54,36 @@ export class Crawler {
   async getSearchList() {
     const homeBoxEls = await this.driver.findElements(By.css('.home__category'));
     console.log('homeBoxEls', homeBoxEls);
-    // for(let i = 0; i < homeBoxEls.length; i++) {
-    //   const homeBoxEl = homeBoxEls[i];
-    //   await this.getCategories(homeBoxEl);
-    // }
+
     for(let homeBoxEl of homeBoxEls) {
-      await this.getCategories(homeBoxEl);
+      await this.getCategories(new WebElement(homeBoxEl));
     }
 
     this.displayCategoryItems();
   }
 
   // 각 세로열에 해당하는 엘리먼트, 이 안에서 각각의 카테고리에 해당하는 아이템을 찾음
-  async getCategories(homeBoxEl) {
-    const categoryEls = await homeBoxEl.findElements(By.css('.home__category__box'));
-    // for(let i = 0; i < categoryEls.length; i++) {
-    //   const categoryEl = categoryEls[i]
-    //   await this.getCategoryItem(categoryEl);
-    // }
+  async getCategories(homeBoxEl: WebElement) {
+    const categoryEls = await homeBoxEl.findElements('.home__category__box');
     for(let categoryEl of categoryEls) {
       await this.getCategoryItem(categoryEl);
     }
   }
 
   // 각각의 카테고리 아이템의 정보를 찾음 (큰 카테고리 제목, 세부 카테고리의 제목과 링크)
-  async getCategoryItem(categoryEl) {
+  async getCategoryItem(categoryEl: WebElement) {
     try {
-      const headerEl = await categoryEl.findElement(By.css('.home__headlink__heading'));
+      const headerEl = await categoryEl.findElement('.home__headlink__heading');
       const categoryName = await headerEl.getText();
-      console.log('categoryName', categoryName)
       const categoryItem = new Category(categoryName);
-      const itemListEls = await categoryEl.findElements(By.css('.home__category__box__list li'));
+      const itemListEls = await categoryEl.findElements('.home__category__box__list li');
       for(let itemEl of itemListEls) {
-      // for(let i = 0; i < itemListEls.length; i++) {
-      //   const itemEl = itemListEls[i];
-        const linkEl = await itemEl.findElement(By.css('a'));
-        const link = await linkEl.getAttribute('href');
-        const titleEl = await linkEl.findElement(By.css('p'));
-        const title = await titleEl.getText();
+        const link = await (await itemEl.findElement('a')).getAttribute('href');
+        const title = await (await itemEl.findElement('p')).getText();
         if (title === '') {
           throw new Error('empty title');
         }
         categoryItem.addItem({label: title, link});
-        // console.log('categoryItem', categoryItem);
         this.categories.push(categoryItem);
       }
     } catch(e) {
@@ -106,7 +92,6 @@ export class Crawler {
   }
 
   displayCategoryItems() {
-    // console.log('displayCategoryItems', this.categories)
     for(let item of this.categories) {
       item.toString();
     }
