@@ -13,5 +13,6 @@ module.exports = {
         'system',
       ],
     }
-  }
+  },
+  babel: { presets: ['@emotion/babel-preset-css-prop'] },
 }

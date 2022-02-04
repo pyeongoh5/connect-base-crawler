@@ -1,0 +1,1 @@
+export type FileExtension = 'csv' | 'txt' | 'json';

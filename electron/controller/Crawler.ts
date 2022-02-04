@@ -1,5 +1,7 @@
 import { Driver } from 'selenium-webdriver/chrome';
-import { Category, WebElement } from '../model/';
+import { Category, WebElement, CrawlerFile } from '../model';
+import { FileManager } from '../manager';
+import { Scheduler } from '../helper';
 
 const path = require('path');
 const { Builder } = require('selenium-webdriver');
@@ -16,20 +18,24 @@ export class Crawler {
     const serviceBuilder = new ServiceBuilder(chromeDriverPath);
     this.driver = new Builder()
     .forBrowser('chrome')
-    .setChromeOptions(new chrome.Options().headless())
+    // .setChromeOptions(new chrome.Options().headless())
     .setChromeService(serviceBuilder)
     .build();
   }
 
   async launch(url) {
-    await this.driver.get('https://baseconnect.in/')
+    await this.driver.get(url);
     await this.watchModalToClose();
+
+    const scheduler = new Scheduler(2000);
+    for await (let i of [0, 1, 2, 3, 4]) {
+      await scheduler.requestActionFrame(()=>{console.log('scheduled', i)});
+    }
   }
 
   async watchModalToClose() {
     await this.driver.executeScript(
       `
-        console.log('observer start');
         var observer = new MutationObserver(function(mutations) {
           mutations.forEach(function(mutationRecord) {
             console.log('style changed!');
@@ -45,7 +51,9 @@ export class Crawler {
   
         var target = document.getElementsByClassName('modalBanner__overlay')[0];
         // 감시자 옵션 포함, 대상 노드에 전달
-        window.observer.observe(target, { attributes : true, attributeFilter : ['style', 'class'] });
+        if (target) {
+          window.observer.observe(target, { attributes : true, attributeFilter : ['style', 'class'] });
+        }
       `
     );
   }
@@ -53,13 +61,16 @@ export class Crawler {
   // 큰 카테고리 박스들이 세로열로 나열되어 있어서 그 세로열(좌, 우로 구성)을 구성하는 엘리먼트를 서치
   async getSearchList() {
     const homeBoxEls = await this.driver.findElements(By.css('.home__category'));
-    console.log('homeBoxEls', homeBoxEls);
 
     for(let homeBoxEl of homeBoxEls) {
       await this.getCategories(new WebElement(homeBoxEl));
     }
 
-    this.displayCategoryItems();
+    // this.displayCategoryItems();
+    const categoryFile = new CrawlerFile(this.categories);
+    const fileManager = FileManager.getInstance();
+    fileManager.addFile('category', categoryFile);
+    fileManager.extractFile(path.resolve('./test'), 'json');
   }
 
   // 각 세로열에 해당하는 엘리먼트, 이 안에서 각각의 카테고리에 해당하는 아이템을 찾음
@@ -84,8 +95,8 @@ export class Crawler {
           throw new Error('empty title');
         }
         categoryItem.addItem({label: title, link});
-        this.categories.push(categoryItem);
       }
+      this.categories.push(categoryItem);
     } catch(e) {
       console.log('occur exceptional error at getCategoryItem at Crawler.ts::', e);
     }

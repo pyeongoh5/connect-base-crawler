@@ -19,6 +19,8 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
+    "jsxImportSource": "@emotion/react",
+    "typeRoots": ["electron/types", "src/types", "node_modules/@types"],
     "downlevelIteration": true
   },
   "include": ["src"]

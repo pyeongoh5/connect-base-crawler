@@ -9,3 +9,10 @@ ipcMain.on(ipcConstants.START_SELENIUM, async (event, ...args) => {
   await crawler.launch(crawlingTarget);
   await crawler.getSearchList();
 })
+
+ipcMain.on(ipcConstants.START_CRAWLING, async (event, ...args) => {
+  console.log('ipcMain receive message::', JSON.parse(args[0]));
+  const { link } = JSON.parse(args[0]);
+  const crawler = new Crawler();
+  await crawler.launch(link);
+})

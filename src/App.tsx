@@ -1,12 +1,16 @@
-import React from 'react';
-import { Routes, Route } from 'react-router-dom'
-import { Main } from './pages';
+import React from "react";
+import { Routes, Route } from "react-router-dom";
+import { Category, SubCategory } from "./pages";
+import { CommonLayout } from "src/components";
 
 function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Main />} />
-    </Routes>
+    <CommonLayout>
+      <Routes>
+        <Route path="/" element={<Category />} />
+        <Route path="/SubCategory" element={<SubCategory />} />
+      </Routes>
+    </CommonLayout>
   );
 }
 
