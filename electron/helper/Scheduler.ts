@@ -1,8 +1,8 @@
 export class Scheduler {
-  frameTime = 500;
-  startTime: number;
-  actionFrameTime: number;
-  throttledCallback: Function;
+  private frameTime = 500;
+  private startTime: number;
+  private actionFrameTime: number;
+  private throttledCallback: Function;
 
   /**
    * @param actionFrameTime milli second
@@ -12,22 +12,22 @@ export class Scheduler {
   }
 
   async requestActionFrame(callback): Promise<boolean | void> {
-    if (!this.startTime) {
-      this.startTime = new Date().getTime();
-      await callback();
-      return true;
-    }
-
-    const endTime = new Date().getTime();
-    console.log('requestActionFrame', endTime - this.startTime);
-    if (endTime - this.startTime > this.actionFrameTime) {
-      await callback();
-      this.startTime = endTime;
-      return true;
+    setTimeout(async () => {
+      if (!this.startTime) {
+        this.startTime = new Date().getTime();
+        await callback();
+        return true;
+      }
+  
+      const endTime = new Date().getTime();
+      if (endTime - this.startTime > this.actionFrameTime) {
+        await callback();
+        this.startTime = endTime;
     } else {
-      // setTimeout(async () => {
-      //   await this.requestActionFrame(callback)
-      // }, this.frameTime);
-    }
+        setTimeout(async () => {
+          await this.requestActionFrame(callback);
+        }, this.frameTime);
+      }
+    }, this.actionFrameTime);
   }
 }

@@ -24,6 +24,8 @@ export const Header = () => {
   const navigator = useNavigate()
   const location = useLocation();
 
+  console.log('location', location);
+  
   return (
     <header css={styles.container}>
       <Button onClick={() => navigator(-1)} css={css`flex: 0`}>

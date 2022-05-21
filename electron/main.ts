@@ -3,6 +3,8 @@ import * as isDev from 'electron-is-dev';
 import * as path from 'path';
 import './ipcMain';
 
+const url = require('url')
+
 let mainWindow: BrowserWindow;
 
 const createWindow = () => {
@@ -10,26 +12,34 @@ const createWindow = () => {
     width: 900,
     height: 680,
     center: true,
-    kiosk: !isDev,
     resizable: true,
     fullscreen: false,
-    fullscreenable: true,
+    fullscreenable: false,
     webPreferences: {
       // node환경처럼 사용하기
       nodeIntegration: true,
       contextIsolation: false,
       // 개발자도구
-      devTools: isDev,
+      devTools: true,
     },
   });
 
+  const urlPath = isDev ? 'http://localhost:3000' : 
+  url.format({
+    pathname: path.resolve(__dirname, './index.html'),
+    protocol: 'file:',
+    slashes: true,
+  });
+  
+
   // production에서는 패키지 내부 리소스에 접근.
   // 개발 중에는 개발 도구에서 호스팅하는 주소에서 로드.
-  mainWindow.loadURL(isDev ? 'http://localhost:3000' : `file://${path.join(__dirname, '../build/index.html')}`);
+  mainWindow.loadURL(urlPath);
 
-  if (isDev) {
+  console.log('url', isDev ? 'http://localhost:3000' : `file://${path.join(__dirname, '../build/index.html')}`);
+  // if (isDev) {
     mainWindow.webContents.openDevTools({ mode: 'detach' });
-  }
+  // }
 
   mainWindow.setResizable(true);
 
@@ -55,8 +65,3 @@ app.on('activate', () => {
     createWindow();
   }
 });
-
-ipcMain.on('Test', (event, ...args) => {
-  console.log('ipcMain receive message::', args[0]);
-  event.sender.send('Test', 'reflect message')
-})

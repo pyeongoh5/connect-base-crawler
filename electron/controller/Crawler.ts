@@ -1,5 +1,7 @@
 import { Driver } from 'selenium-webdriver/chrome';
-import { Category, WebElement, CrawlerFile } from '../model';
+import * as isDev from 'electron-is-dev';
+
+import { Category, WebElement, CrawlerFile, Company, DataManager } from '../model';
 import { FileManager } from '../manager';
 import { Scheduler } from '../helper';
 
@@ -7,15 +9,28 @@ const path = require('path');
 const { Builder } = require('selenium-webdriver');
 const { ServiceBuilder } = require('selenium-webdriver/chrome');
 const chrome = require('selenium-webdriver/chrome');
-const chromeDriverPath = path.resolve('chromedriver');
+const chromeDriverPath = isDev ? path.resolve('chromedriver') : path.join(__dirname, '/../../chromedriver');
+console.log('default chromeDriverPath', chromeDriverPath)
 const By = require('selenium-webdriver').By;
 
 export class Crawler {
   driver: Driver;
+  driverPath: string;
   categories: Category[];
+  scheduler: Scheduler;
+  rootElement: WebElement;
+  prevUrl: string;
+  dataManagaer: DataManager;
+
   constructor() {
     this.categories = [];
-    const serviceBuilder = new ServiceBuilder(chromeDriverPath);
+    this.scheduler = new Scheduler(2000);
+    this.dataManagaer = new DataManager();
+    this.driverPath = chromeDriverPath;
+  }
+
+  createDriver() {
+    const serviceBuilder = new ServiceBuilder(this.driverPath);
     this.driver = new Builder()
     .forBrowser('chrome')
     // .setChromeOptions(new chrome.Options().headless())
@@ -23,17 +38,44 @@ export class Crawler {
     .build();
   }
 
-  async launch(url) {
-    await this.driver.get(url);
-    await this.watchModalToClose();
+  setDriverPath(driverPath: string) {
+    this.driverPath = driverPath;
+  }
 
-    const scheduler = new Scheduler(2000);
-    for await (let i of [0, 1, 2, 3, 4]) {
-      await scheduler.requestActionFrame(()=>{console.log('scheduled', i)});
-    }
+  setSavePath(savePath: string) {
+    this.dataManagaer.setSavePath(savePath);
+  }
+
+  setCategoryPath(categoryName: string) {
+    this.dataManagaer.setCategoryPath(categoryName);
+  }
+
+  async launch(url: string) {
+    await this.moveTo(url);
+  }
+
+  close() {
+    this.driver.quit();
+  }
+
+  async moveTo(url: string) {
+    await this.driver.get(url);
+
+    const bodyEl = await this.driver.findElement(By.css('body'));
+    this.rootElement = new WebElement(bodyEl);
   }
 
   async watchModalToClose() {
+    console.log('watchModalToClose');
+    try {
+      const modalBtn = await this.rootElement.findElement('.modalClose-btn');
+      const classNames = await modalBtn.getAttribute('class');
+      if (classNames.includes('modalBanner__show')) {
+        await (await modalBtn.findElement('.x-btn')).getOriginal().click();
+      }
+    } catch(err) {
+      console.log('watchModalToClose err::', err.message);
+    }
     await this.driver.executeScript(
       `
         var observer = new MutationObserver(function(mutations) {
@@ -56,6 +98,75 @@ export class Crawler {
         }
       `
     );
+  }
+
+  async startCrawlCompanies (label: string) {
+    await this.watchModalToClose();
+
+    const companyList = await this.collectCompanyList();
+    console.log('companyList', companyList.length);
+    const urls = await this.getCompanyDetailPages(companyList);
+
+    this.prevUrl = await this.driver.getCurrentUrl();
+    for(let url of urls) {
+      await this.getCompanyInfo(url);
+    }
+
+    try {
+      await this.moveTo(this.prevUrl);
+      const next = (await this.rootElement.findElement('.pagenation a[rel="next"]'));
+      console.log('next', await next.getText());
+      const nextUrl = await next.getAttribute('href');
+      await this.moveTo(nextUrl);
+      await this.startCrawlCompanies(label);
+    } catch(err) {
+      console.log('err', err);
+      console.log(this.dataManagaer.getWeight());
+      this.dataManagaer.saveToFile(label);
+    }
+  }
+
+  async crawlCurrentPage () {
+
+  }
+
+  async getCompanyDetailPages(companyList: WebElement[]) {
+    const urls = [];
+    for(let company of companyList) {
+      const detailUrl = await (await company.findElement('h4 a')).getAttribute('href');
+      urls.push(detailUrl);
+    }
+    return urls;
+  }
+
+  async collectCompanyList() {
+    return await this.rootElement.findElements('.searches__result__list');
+  }
+
+  async getCompanyInfo(url: string) {
+    await this.moveTo(url);
+    await this.watchModalToClose();
+
+    const basicInfoContainer = await this.rootElement.findElement('.node__basicinfo');
+
+    const dls = await basicInfoContainer.findElements('dl');
+
+    try {
+      const companyData = new Company();
+      for (const dl of dls) {
+        const dt = await dl.findElement('dt');
+        const dd = await dl.findElement('dd');
+        const dtName = await dt.getText();
+        const ddName = await dd.getText();
+        companyData.seData(dtName, ddName);
+      }
+
+      this.dataManagaer.addCompanyData(companyData);
+    } catch(err) {
+      console.log('getCompanyInfo err:: ', err);
+      throw err;
+    }
+
   }
 
   // 큰 카테고리 박스들이 세로열로 나열되어 있어서 그 세로열(좌, 우로 구성)을 구성하는 엘리먼트를 서치

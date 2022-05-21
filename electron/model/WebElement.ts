@@ -9,20 +9,44 @@ export class WebElement {
   }
 
   async findElement(selector: string): Promise<WebElement> {
-    const element = await this.webElement.findElement(By.css(selector));
-    return new WebElement(element);
+    try {
+      const element = await this.webElement.findElement(By.css(selector));
+      return new WebElement(element);
+    } catch(err) {
+      console.log('findElement err::', err);
+      throw err;
+    }
   }
 
   async findElements(selector: string): Promise<WebElement[]> {
-    const elements = await this.webElement.findElements(By.css(selector));
-    return elements.map((element) => new WebElement(element));
+    try {
+      const elements = await this.webElement.findElements(By.css(selector));
+      return elements.map((element) => new WebElement(element));
+    } catch(err) {
+      console.log('findElements err::', err);
+      throw err;
+    }
   }
 
-  async getText() {
-    return await this.webElement.getText();
+  async getText(): Promise<string> {
+    try {
+      return await this.webElement.getText();
+    }  catch(err) {
+      console.log('getText err::', err);
+      throw err;
+    }
   }
 
   async getAttribute(attributeName: string) {
-    return await this.webElement.getAttribute(attributeName);
+    try {
+      return await this.webElement.getAttribute(attributeName);
+    } catch(err) {
+      console.log('getAttribute err::', err);
+      throw err;
+    }
   }
-}
+
+  getOriginal(): SeleniumWebElement {
+    return this.webElement;
+  }
+} 
