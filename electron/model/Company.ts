@@ -6,7 +6,7 @@ export class Company {
     this.data = {};
   }
 
-  seData(key: string, value: string) {
+  setData(key: string, value: string) {
     if (key) {
       this.data[key] = value;
     }

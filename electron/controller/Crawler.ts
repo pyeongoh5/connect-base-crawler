@@ -148,17 +148,29 @@ export class Crawler {
     await this.watchModalToClose();
 
     const basicInfoContainer = await this.rootElement.findElement('.node__basicinfo');
+    const basicInfoDls = await basicInfoContainer.findElements('dl');
 
-    const dls = await basicInfoContainer.findElements('dl');
+    const contactInfoContainer = await this.rootElement.findElement('.node__contact')
+    const contactInfoList = await contactInfoContainer.findElements('.node__box__heading+.cf p');
 
     try {
       const companyData = new Company();
-      for (const dl of dls) {
+      const companyName = await (await this.rootElement.findElement('.node__header__text__title')).getText();
+      companyData.setData('company', companyName);
+
+      for (const dl of basicInfoDls) {
         const dt = await dl.findElement('dt');
         const dd = await dl.findElement('dd');
         const dtName = await dt.getText();
         const ddName = await dd.getText();
-        companyData.seData(dtName, ddName);
+        companyData.setData(dtName, ddName);
+      }
+
+      for (const contact of contactInfoList) {
+        const aTag = await contact.findElement('a');
+        const name = await aTag.getText();
+        const value = await aTag.getAttribute('href');
+        companyData.setData(name, value);
       }
 
       this.dataManagaer.addCompanyData(companyData);

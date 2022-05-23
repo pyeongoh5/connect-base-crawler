@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { ipcConstants } from 'src/constants';
 import { useIpc } from 'src/utils';
 import { homedir } from 'os';
+import path from 'path';
 
 const { chromeDriverVersion } = require('../../../package.json');
 
@@ -113,7 +114,7 @@ export function Setup() {
             ref={ref}
             placeholder="testFolder/test/"
             onChange={(e) => {
-              setSavePath(`${homedir()}/${e.target.value}`);
+              setSavePath(path.join(homedir(), e.target.value));
               console.log('ee', homedir() + e.target.value)
             }}
           />
