@@ -50,6 +50,10 @@ export class Crawler {
     this.dataManagaer.setCategoryPath(categoryName);
   }
 
+  resetData() {
+    this.dataManagaer.resetData();
+  }
+
   async launch(url: string) {
     await this.moveTo(url);
   }

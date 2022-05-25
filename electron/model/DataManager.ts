@@ -29,6 +29,11 @@ export class DataManager {
     this.categoryPath = categoryPath;
   }
 
+  resetData() {
+    this.companyData = [];
+    this.keyBalancePoint = {};
+  }
+
   addCompanyData(data: Company) {
     this.companyData.push(data);
     this.addWeight(data);
