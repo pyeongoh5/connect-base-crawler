@@ -23,6 +23,7 @@ ipcMain.on(ipcConstants.START_CRAWLING, async (event, ...args) => {
     await crawler.setCategoryPath(category);
     await crawler.launch(link);
     await crawler.startCrawlCompanies(label);
+    await crawler.resetData();
     crawler.close();
     event.sender.send('alert', '완료');
   } catch (err) {
@@ -43,7 +44,9 @@ ipcMain.on(ipcConstants.START_CRAWLING_ALL, async (event, ...args) => {
       const { link, label } = item;
       await crawler.setCategoryPath(category);
       await crawler.launch(link);
+      console.log('crawler.startCrawlCompanies');
       await crawler.startCrawlCompanies(label);
+      console.log('crawler.resetData');
       await crawler.resetData();
     }
     crawler.close();

@@ -51,6 +51,7 @@ export class Crawler {
   }
 
   resetData() {
+    console.log('resetData');
     this.dataManagaer.resetData();
   }
 
@@ -70,7 +71,6 @@ export class Crawler {
   }
 
   async watchModalToClose() {
-    console.log('watchModalToClose');
     try {
       const modalBtn = await this.rootElement.findElement('.modalClose-btn');
       const classNames = await modalBtn.getAttribute('class');
@@ -112,22 +112,39 @@ export class Crawler {
     const urls = await this.getCompanyDetailPages(companyList);
 
     this.prevUrl = await this.driver.getCurrentUrl();
+
     for(let url of urls) {
-      await this.getCompanyInfo(url);
+      try {
+        await this.getCompanyInfo(url);
+      } catch(err) {
+        const { message } = err;
+        console.log('getCompanyInfo err', err);
+        if (message.includes('TimeoutError')) {
+          await this.getCompanyInfo(url);
+        }
+      }
     }
 
+    let nextUrl;
     try {
       await this.moveTo(this.prevUrl);
       const next = (await this.rootElement.findElement('.pagenation a[rel="next"]'));
       console.log('next', await next.getText());
-      const nextUrl = await next.getAttribute('href');
+      nextUrl = await next.getAttribute('href');
       await this.moveTo(nextUrl);
       await this.startCrawlCompanies(label);
     } catch(err) {
-      console.log('err', err);
-      console.log(this.dataManagaer.getWeight());
-      this.dataManagaer.saveToFile(label);
+      console.log('move next err', err);
+      const { message } = err;
+      if (message.includes('TimeoutError')) {
+        await this.moveTo(nextUrl);
+        await this.startCrawlCompanies(label);
+      } else {
+        console.log(this.dataManagaer.getWeight());
+        this.dataManagaer.saveToFile(label);
+      }
     }
+    return;
   }
 
   async crawlCurrentPage () {
@@ -167,7 +184,9 @@ export class Crawler {
         const dd = await dl.findElement('dd');
         const dtName = await dt.getText();
         const ddName = await dd.getText();
-        companyData.setData(dtName, ddName);
+        if (dtName !== '決算月') {
+          companyData.setData(dtName, ddName);
+        }
       }
 
       for (const contact of contactInfoList) {
@@ -175,6 +194,53 @@ export class Crawler {
         const name = await aTag.getText();
         const value = await aTag.getAttribute('href');
         companyData.setData(name, value);
+      }
+
+      // 주소찾기 (住所)
+      const addressTableElements = await contactInfoContainer.findElements('.nodeTable--simple dl');
+      for (const dl of addressTableElements) {
+        const dt = await dl.findElement('dt');
+        const dtName = await dt.getText();
+        if (dtName === '住所') {
+          const dd = await dl.findElement('dd');
+          const ddName = await dd.getText();
+          const [zipCode, address] = ddName.split('\n');
+          companyData.setData('zipCode', zipCode);
+          companyData.setData('住所', address);
+        }
+      }
+
+
+      // 법인번호 (法人番号)
+      const companyNumber = (await (await this.rootElement.findElements('.node__header__number.cf .node__header__number__list'))[1].getText()).split('法人番号')[1];
+      companyData.setData('法人番号', companyNumber);
+
+      // 회사 설명 (会社説明)
+      const companyDescription = await (await this.rootElement.findElement('.node__header__cont__text__heading')).getText();
+      companyData.setData('会社説明', companyDescription);
+
+      // 회사 특징 
+      const tagContainer = await this.rootElement.findElements('.node__header__tag');
+      for (const tagWrapper of tagContainer) {
+        const title = await (await tagWrapper.findElement('.node__header__tag__title')).getText();
+        if (title === '特徴') { // 특징
+          const tagList = await tagWrapper.findElements('.node__header__tag__list li');
+          const specific = [];
+          for (const item of tagList) {
+            const text = await (await item.findElement('a')).getText();
+            if (text === 'BtoB') {
+              specific.push('BtoB');
+            } else if(text === 'BtoC') {
+              specific.push('BtoC');
+            }
+          }
+
+          if (specific.length === 2) {
+            companyData.setData('特徴', 'ALL');
+          } else {
+            companyData.setData('特徴', specific?.[0] || 'NA');
+          }
+        }
       }
 
       this.dataManagaer.addCompanyData(companyData);

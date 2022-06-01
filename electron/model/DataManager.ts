@@ -88,7 +88,6 @@ export class DataManager {
       row.push(index);
       sortedkeys.map((key) => {
         const rawData = data.getAllData();
-        console.log('rawData', rawData);
         if (rawData[key]) {
           row.push(rawData[key]);
         } else {
@@ -97,6 +96,8 @@ export class DataManager {
       });
       excelData.push(row);
     });
+
+    console.log('excelData', excelData.length);
 
     try {
       const wb = utils.book_new();
